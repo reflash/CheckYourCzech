@@ -121,4 +121,4 @@ let option value text =
     option [ Value value] [ str text ]
 
 let select selectedValue changeHandler choices =
-    select [ Value selectedValue; OnChange changeHandler; Style [ BorderRadius "10%"; FontSize "20px" ] ] choices
+    select [ Value selectedValue; OnChange changeHandler; Style [ FontSize "20px" ] ] choices

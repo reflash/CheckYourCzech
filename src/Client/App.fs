@@ -5,6 +5,7 @@ open Elmish.React
 open Elmish.Browser.UrlParser
 open Elmish.Browser.Navigation
 open Fable.Helpers.React
+open Fulma
 open Pages
 
 #if DEBUG
@@ -14,7 +15,7 @@ open Elmish.HMR
 
 let urlParser location = parseHash pageParser location
 
-type Model =
+type Subview =
     | Home
     | NounPlurals of NounPlurals.Model
     | NounAccusatives of NounAccusatives.Model
@@ -22,6 +23,12 @@ type Model =
     | AdjectiveComparatives of AdjectiveComparatives.Model
     | VerbImperatives of VerbImperatives.Model
     | VerbParticiples of VerbParticiples.Model
+
+
+type Model = {
+    Subview: Subview
+    ActivePage: Page
+}
 
 type Msg = 
     | NounPluralsMsg of NounPlurals.Msg
@@ -49,36 +56,40 @@ let viewPage model dispatch =
         VerbParticiples.view m (VerbParticiplesMsg >> dispatch)
 
 let urlUpdate (result:Page option) model =
+    let newModel =
+        {ActivePage=result |> Option.defaultValue Page.Home; 
+         Subview=model.Subview}
+    
     match result with
     | None ->
-        ( model, Navigation.modifyUrl (Pages.toHash Page.Home) )
+        newModel, Navigation.modifyUrl (Pages.toHash Page.Home)
     | Some Page.Home ->
-        Home, Cmd.none
+        newModel, Cmd.none
     | Some Page.NounPlurals ->
         let m, cmd = NounPlurals.init()
-        NounPlurals m, Cmd.map NounPluralsMsg cmd
+        {newModel with Subview = NounPlurals m}, Cmd.map NounPluralsMsg cmd
     | Some Page.NounAccusatives ->
         let m, cmd = NounAccusatives.init()
-        NounAccusatives m, Cmd.map NounAccusativesMsg cmd
+        {newModel with Subview = NounAccusatives m}, Cmd.map NounAccusativesMsg cmd
     | Some Page.AdjectivePlurals ->
         let m, cmd = AdjectivePlurals.init()
-        AdjectivePlurals m, Cmd.map AdjectivePluralsMsg cmd
+        {newModel with Subview = AdjectivePlurals m}, Cmd.map AdjectivePluralsMsg cmd
     | Some Page.AdjectiveComparatives ->
         let m, cmd = AdjectiveComparatives.init()
-        AdjectiveComparatives m, Cmd.map AdjectiveComparativesMsg cmd
+        {newModel with Subview = AdjectiveComparatives m}, Cmd.map AdjectiveComparativesMsg cmd
     | Some Page.VerbImperatives ->
         let m, cmd = VerbImperatives.init()
-        VerbImperatives m, Cmd.map VerbImperativesMsg cmd
+        {newModel with Subview = VerbImperatives m}, Cmd.map VerbImperativesMsg cmd
     | Some Page.VerbParticiples ->
         let m, cmd = VerbParticiples.init()
-        VerbParticiples m, Cmd.map VerbParticiplesMsg cmd
+        {newModel with Subview = VerbParticiples m}, Cmd.map VerbParticiplesMsg cmd
 
 let init result = 
     Logger.setup()
-    urlUpdate result Home
+    urlUpdate result {ActivePage = Page.Home; Subview = Subview.Home}
 
 let update msg model =
-    match msg, model with
+    match msg, model.Subview with
     | NounPluralsMsg msg, NounPlurals m ->
         let m, cmd = NounPlurals.update msg m
         NounPlurals m, Cmd.map NounPluralsMsg cmd
@@ -102,9 +113,14 @@ let update msg model =
 
 let view model dispatch =
     div [] [ 
-        Menu.view()
-        hr []
-        div [ Styles.center "column" ] (viewPage model dispatch)
+        // Menu.view()
+        Hero.hero [ Hero.Color IsLight
+                    Hero.IsMedium ]
+            [ Hero.head [ ]
+                [ Menu.view model ]
+              Hero.body [ ]
+                [ div [ Styles.center "column" ] (viewPage model dispatch) ] ]
+        
     ]
 
 Program.mkProgram init update view
